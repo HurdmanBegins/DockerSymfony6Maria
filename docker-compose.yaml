@@ -1,0 +1,27 @@
+version: '1.0'
+services:
+    symfony6php8deb:
+        container_name: symfony6php8deb
+        build: symfony6php8deb
+        ports:
+            - "8000:8000"
+        environment:
+          - DATABASE_URL="mysql://my_login:my_password@mariadb:3306/symfony6bdd"
+          - APP_DEBUG=true
+          - APP_DEV=true
+          - PROJECT_NAME=my_project
+        volumes:
+          - ./src:/var/www/html
+
+        command: bash -c "cd /var/www/html/ && symfony new $$PROJECT_NAME --full ; cd $$PROJECT_NAME && symfony serve -d && tail -f /dev/null"
+
+    mariadb:
+        image: docker.io/mariadb:10-focal
+        environment:
+            - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes
+            - MARIADB_USER=my_login
+            - MARIADB_DATABASE=symfony6bdd
+            - MARIADB_PASSWORD=my_password
+        volumes:
+            - ./mariadb:/var/lib/mysql:rw
+
