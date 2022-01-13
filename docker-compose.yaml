@@ -1,27 +1,51 @@
-version: '1.0'
+version: '3.3'
 services:
     symfony6php8deb:
-        container_name: symfony6php8deb
+        container_name: picassoSymfony
         build: symfony6php8deb
-        ports:
-            - "8000:8000"
         environment:
-          - DATABASE_URL="mysql://my_login:my_password@mariadb:3306/symfony6bdd"
+          - DATABASE_URL=mysql://symfonytest:pouetpouet@mariadb:3306/symfony6bdd
           - APP_DEBUG=true
           - APP_DEV=true
-          - PROJECT_NAME=my_project
+          - PROJECT_NAME=picassoSymfony
         volumes:
           - ./src:/var/www/html
-
-        command: bash -c "cd /var/www/html/ && symfony new $$PROJECT_NAME --full ; cd $$PROJECT_NAME && symfony serve -d && tail -f /dev/null"
-
+        command: bash -c "cd /var/www/html/ && symfony new $$PROJECT_NAME --full ; cd $$PROJECT_NAME && symfony server:stop ; symfony server:start -d ; symfony server:log"
+        depends_on:
+          - mariadb
+        labels:
+          - "traefik.http.routers.symfonytest.rule=Host(`127.0.0.1`)"
+          - "traefik.http.services.symfonytest.loadbalancer.server.port=8000"
+          - "traefik.enable=true"
     mariadb:
         image: docker.io/mariadb:10-focal
         environment:
             - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes
-            - MARIADB_USER=my_login
+            - MARIADB_USER=symfonytest
             - MARIADB_DATABASE=symfony6bdd
-            - MARIADB_PASSWORD=my_password
+            - MARIADB_PASSWORD=pouetpouet
         volumes:
             - ./mariadb:/var/lib/mysql:rw
-
+    phpmyadmin:
+      image: phpmyadmin
+      restart: always
+      labels:
+        - "traefik.http.routers.phpmyadmin.rule=Host(`127.0.0.2`)"
+        - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
+        - "traefik.enable=true"
+      environment:
+        - PMA_HOST=mariadb
+    traefik:
+      image: traefik:latest
+      command:
+        - --api.insecure=true
+        - --providers.docker
+        - --providers.docker.exposedByDefault=false
+        - --providers.docker.network=internal
+      ports:
+        - 80:80
+        - 8080:8080
+      volumes:
+        - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      depends_on:
+        - symfony6php8deb
